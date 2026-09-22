@@ -743,21 +743,23 @@ def fetch_ip_user_by_ip(ip: str) -> dict[str, Any] | None:
         return row_to_dict(row)
 
 
-def list_ip_users(q: str = "", limit: int = 500) -> list[dict[str, Any]]:
+def list_ip_users(q: str = "", limit: int | None = None) -> list[dict[str, Any]]:
     with connect() as conn:
         if q:
             like = f"%{q.strip()}%"
-            rows = conn.execute(
-                """
+            sql = """
                 SELECT * FROM ip_users
                 WHERE ip LIKE ? OR user_name LIKE ? OR department LIKE ? OR location LIKE ?
                 ORDER BY ip
-                LIMIT ?
-                """,
-                (like, like, like, like, limit),
-            ).fetchall()
+            """
+            params: list[Any] = [like, like, like, like]
         else:
-            rows = conn.execute("SELECT * FROM ip_users ORDER BY ip LIMIT ?", (limit,)).fetchall()
+            sql = "SELECT * FROM ip_users ORDER BY ip"
+            params = []
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(limit)
+        rows = conn.execute(sql, params).fetchall()
         return [row_to_dict(row) for row in rows]
 
 

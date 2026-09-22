@@ -1,0 +1,2 @@
+zabbix地址：10.84.85.34:3005
+zabbix token 令牌:ea501d3c3a67db5a58b0b9e8c87ea806cb5ed8fd48d4a60f564b1cc33175ca72

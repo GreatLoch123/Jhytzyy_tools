@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>医院网络综合管理台</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand">
+          <span class="brand-mark">网</span>
+          <div class="brand-text">
+            <strong>医院网络综合管理台</strong>
+            <small>潜江市江汉油田总医院</small>
+          </div>
+        </div>
+        <nav class="app-nav" aria-label="功能导航">
+          <button class="nav-item active" data-view="topology" type="button">
+            <i data-lucide="network"></i><span>拓扑</span>
+          </button>
+          <button class="nav-item" data-view="navs" type="button">
+            <i data-lucide="book-marked"></i><span>网址导航</span>
+          </button>
+          <button class="nav-item" data-view="locate" type="button">
+            <i data-lucide="radar"></i><span>IP定位</span>
+          </button>
+          <button class="nav-item" data-view="remote" type="button">
+            <i data-lucide="radio-tower"></i><span>远程检测</span>
+          </button>
+          <button class="nav-item" data-view="settings" type="button">
+            <i data-lucide="sliders-horizontal"></i><span>采集设置</span>
+          </button>
+        </nav>
+        <div class="header-meta">
+          <span id="collectStatus" class="collect-pill" title="最近一次采集">
+            <i data-lucide="clock"></i><b>未采集</b>
+          </span>
+        </div>
+      </header>
+
+      <main class="app-main">
+        <section id="view-topology" class="view active">
+          <div class="topology-stage">
+            <div class="topbar">
+              <div class="topbar-title">
+                <div class="title-line">
+                  <i data-lucide="git-branch"></i>
+                  <h1>交换机动态拓扑</h1>
+                </div>
+                <p id="topologyMeta">数据源：--</p>
+              </div>
+              <div class="status-strip" aria-label="链路状态概览">
+                <span><b id="switchCount">0</b><small>台交换机</small></span>
+                <span><b id="linkCount">0</b><small>条链路</small></span>
+                <span class="danger"><b id="downCount">0</b><small>条断开</small></span>
+              </div>
+              <div class="topbar-actions">
+                <button id="reloadTopologyBtn" class="icon-btn" type="button" title="刷新拓扑">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="workspace">
+              <aside class="side-panel" id="sidePanel">
+                <button class="side-toggle" id="sideToggle" type="button" aria-label="展开侧栏">▶</button>
+                <div class="side-content">
+                  <div class="panel-section">
+                    <h2>链路状态</h2>
+                    <div id="linkList" class="link-list"></div>
+                  </div>
+                  <div class="panel-section">
+                    <h2>数据接口</h2>
+                    <div id="zabbixStatus" class="zabbix-status status-unknown">Zabbix 状态检测中…</div>
+                    <button id="simulateBtn" class="primary-btn" type="button">模拟断开</button>
+                  </div>
+                </div>
+              </aside>
+
+              <section class="canvas-panel">
+                <svg id="topologySvg" viewBox="0 0 1200 760" role="img" aria-label="交换机拓扑画布">
+                  <defs>
+                    <filter id="lineGlow" x="-40%" y="-40%" width="180%" height="180%">
+                      <feGaussianBlur stdDeviation="4" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                    <linearGradient id="healthyLine" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#00d4ff" />
+                      <stop offset="50%" stop-color="#7cffc4" />
+                      <stop offset="100%" stop-color="#00d4ff" />
+                    </linearGradient>
+                    <linearGradient id="downLine" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#ff4d6d" />
+                      <stop offset="100%" stop-color="#ffb703" />
+                    </linearGradient>
+                  </defs>
+                  <g class="grid-layer"></g>
+                  <g id="linksLayer"></g>
+                  <g id="nodesLayer"></g>
+                </svg>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-navs" class="view">
+          <div class="view-header">
+            <div class="view-heading">
+              <h2>网址导航</h2>
+              <p id="navCount">0 个站点</p>
+            </div>
+            <div class="view-tools">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input id="navSearch" type="search" placeholder="搜索名称或地址" />
+              </div>
+              <select id="navCategoryFilter" class="select-input" aria-label="分类筛选">
+                <option value="">全部分类</option>
+              </select>
+              <button id="addNavBtn" class="primary-btn" type="button">
+                <i data-lucide="plus"></i><span>添加网址</span>
+              </button>
+            </div>
+          </div>
+          <div id="navGroups" class="nav-groups"></div>
+        </section>
+
+        <section id="view-locate" class="view">
+          <div class="view-header">
+            <div class="view-heading">
+              <h2>IP 定位与终端台账</h2>
+              <p id="locateCount">0 条记录</p>
+            </div>
+            <div class="view-tools">
+              <div class="search-box">
+                <i data-lucide="search"></i>
+                <input id="locateSearch" type="search" placeholder="IP / MAC / 姓名 / 部门" />
+              </div>
+              <select id="locateFilter" class="select-input" aria-label="记录筛选">
+                <option value="all">全部记录</option>
+                <option value="online">当前在线</option>
+                <option value="registered">已登记使用人</option>
+                <option value="unregistered">未登记使用人</option>
+              </select>
+              <label class="switch-check collection-mode" title="开启后显示所有曾发现的终端；关闭后仅查看本次在线快照">
+                <input id="inventoryMode" type="checkbox" checked />
+                <span>累计收录</span>
+              </label>
+              <button id="importUsersBtn" class="secondary-btn" type="button">
+                <i data-lucide="upload"></i><span>导入台账</span>
+              </button>
+              <button id="exportLocateBtn" class="secondary-btn" type="button">
+                <i data-lucide="download"></i><span>导出定位台账</span>
+              </button>
+              <button id="addUserBtn" class="primary-btn" type="button">
+                <i data-lucide="plus"></i><span>新增记录</span>
+              </button>
+            </div>
+          </div>
+          <div id="locateStats" class="stat-row"></div>
+          <div class="table-panel">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>IP 地址</th>
+                  <th>MAC 地址</th>
+                  <th>使用人</th>
+                  <th>部门</th>
+                  <th>接入交换机</th>
+                  <th>端口</th>
+                  <th>VLAN</th>
+                  <th>最后发现</th>
+                  <th>状态</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="locateTable"></tbody>
+            </table>
+            <div id="locateEmpty" class="empty-state">暂无匹配记录</div>
+          </div>
+        </section>
+
+        <section id="view-remote" class="view">
+          <div class="view-header">
+            <div class="view-heading">
+              <h2>远程端口检测</h2>
+              <p id="remoteCount">0 种远程方式</p>
+            </div>
+            <div class="view-tools">
+              <button id="addRemoteBtn" class="primary-btn" type="button">
+                <i data-lucide="plus"></i><span>维护远程方式</span>
+              </button>
+            </div>
+          </div>
+          <div class="panel" id="portTestPanel">
+            <div class="panel-title">
+              <h3>端口开放测试</h3>
+              <span id="testStatus" class="status-badge muted">空闲</span>
+            </div>
+            <div class="test-form">
+              <label>
+                <span>目标地址</span>
+                <input id="testHost" type="text" placeholder="IP 或域名，例如 10.10.10.10" />
+              </label>
+              <label>
+                <span>端口（可自由填写）</span>
+                <input id="testPorts" type="text" placeholder="例如 22, 3389, 443；留空则检测常用远程" />
+              </label>
+              <div class="test-actions">
+                <button id="quickTestBtn" class="primary-btn" type="button">
+                  <i data-lucide="zap"></i><span>一键检测常用远程</span>
+                </button>
+                <button id="customTestBtn" class="secondary-btn" type="button">
+                  <i data-lucide="activity"></i><span>测试输入端口</span>
+                </button>
+              </div>
+            </div>
+            <div id="portPresets" class="port-chips">
+              <button data-port="3389" type="button">RDP 3389</button>
+              <button data-port="22" type="button">SSH 22</button>
+              <button data-port="23" type="button">Telnet 23</button>
+              <button data-port="5900" type="button">VNC 5900</button>
+              <button data-port="443" type="button">HTTPS 443</button>
+              <button data-port="80" type="button">HTTP 80</button>
+            </div>
+            <div class="table-panel compact">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>端口</th>
+                    <th>服务</th>
+                    <th>结果</th>
+                    <th>说明</th>
+                  </tr>
+                </thead>
+                <tbody id="portTestResults"></tbody>
+              </table>
+              <div id="portTestEmpty" class="empty-state">
+                暂无检测记录，输入地址后点击“一键检测常用远程”
+              </div>
+            </div>
+          </div>
+          <div class="panel" id="remoteTargetsPanel">
+            <div class="panel-title">
+              <h3>远程方式维护</h3>
+              <span class="muted small-text">这里维护常用主机和默认端口，不影响手动检测</span>
+            </div>
+            <div id="remoteTargetList" class="remote-target-list"></div>
+          </div>
+        </section>
+
+        <section id="view-settings" class="view">
+          <div class="view-header">
+            <div class="view-heading">
+              <h2>采集设置</h2>
+              <p id="collectMeta">定时任务：--</p>
+            </div>
+            <div class="view-tools">
+              <button id="collectArpBtn" class="secondary-btn" type="button">
+                <i data-lucide="database"></i><span>采集 ARP</span>
+              </button>
+              <button id="collectMacBtn" class="secondary-btn" type="button">
+                <i data-lucide="cable"></i><span>采集 MAC</span>
+              </button>
+              <button id="syncWorkbookBtn" class="secondary-btn" type="button">
+                <i data-lucide="refresh-cw"></i><span>同步 Excel</span>
+              </button>
+              <button id="collectAllBtn" class="primary-btn" type="button">
+                <i data-lucide="zap"></i><span>立即全部采集</span>
+              </button>
+            </div>
+          </div>
+          <div id="collectStats" class="stat-row"></div>
+          <div class="panel discovery-panel">
+            <div class="panel-title">
+              <h3>自动发现</h3>
+              <span id="discoveryStatus" class="status-badge muted">已关闭</span>
+            </div>
+            <div class="discovery-form">
+              <label class="switch-check collection-mode">
+                <input id="discoveryEnabled" type="checkbox" />
+                <span>启用自动发现</span>
+              </label>
+              <label><span>采集间隔（分钟）</span><input id="discoveryInterval" class="text-input" type="number" min="5" max="10080" value="60" /></label>
+              <button id="saveDiscoveryBtn" class="primary-btn" type="button">
+                <i data-lucide="save"></i><span>保存自动发现设置</span>
+              </button>
+              <span id="discoveryMeta" class="muted"></span>
+            </div>
+            <p class="panel-hint">启用后按间隔自动执行 ARP + MAC 全量采集，并持续写入累计终端库。建议先用 30–60 分钟持续发现，收集充分后再改为低频或关闭。</p>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <h3>交换机采集清单</h3>
+              <span id="switchSummary">--</span>
+            </div>
+            <div class="table-panel">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>IP</th>
+                    <th>角色</th>
+                    <th>SNMP 团体名</th>
+                    <th>启用</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="switchTable"></tbody>
+              </table>
+              <div id="switchEmpty" class="empty-state">暂未加载交换机</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <h3>采集记录</h3>
+            </div>
+            <div class="table-panel">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>开始时间</th>
+                    <th>类型</th>
+                    <th>交换机</th>
+                    <th>成功</th>
+                    <th>读取 / 变化</th>
+                    <th>状态</th>
+                    <th>失败</th>
+                  </tr>
+                </thead>
+                <tbody id="collectRunsTable"></tbody>
+              </table>
+              <div id="runsEmpty" class="empty-state">暂无采集记录</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">
+              <h3>端口排除清单</h3>
+              <span id="portFilterSummary" class="muted">--</span>
+              <div class="panel-actions">
+                <button id="importPortFiltersBtn" class="secondary-btn sm" type="button">
+                  <i data-lucide="upload"></i><span>导入</span>
+                </button>
+                <button id="exportPortFiltersBtn" class="secondary-btn sm" type="button">
+                  <i data-lucide="download"></i><span>导出</span>
+                </button>
+                <button id="addPortFilterBtn" class="secondary-btn sm" type="button">
+                  <i data-lucide="plus"></i><span>手动添加</span>
+                </button>
+                <button id="syncAutoFiltersBtn" class="secondary-btn sm" type="button">
+                  <i data-lucide="wand-2"></i><span>自动补全</span>
+                </button>
+              </div>
+            </div>
+            <p class="panel-hint">
+              上联口和连接可管理交换机的口会自动排除。这里可以手动添加其他不需要采集的端口（例如下联交换机口、级联口）。
+            </p>
+            <div class="port-filter-wrap">
+              <div class="port-filter-search">
+                <input id="portFilterSearch" type="search" placeholder="搜索交换机 IP、名称或端口" />
+              </div>
+              <div id="portFilterList" class="port-filter-list"></div>
+              <div id="portFilterEmpty" class="empty-state">暂无端口排除规则</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toastRoot" class="toast-root"></div>
+    <div id="modalRoot"></div>
+
+    <script src="./lucide.min.js"></script>
+    <script src="./js/api.js"></script>
+    <script src="./js/modal.js"></script>
+    <script src="./js/topology.js"></script>
+    <script src="./js/navs.js"></script>
+    <script src="./js/locate.js"></script>
+    <script src="./js/remote.js"></script>
+    <script src="./js/settings.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
+</html>

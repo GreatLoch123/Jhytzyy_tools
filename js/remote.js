@@ -7,6 +7,7 @@
     { port: 23, service: "Telnet" },
     { port: 5900, service: "VNC" },
     {port:3899, service: "Radmin"},
+    {port:9182, service: "群思软件"},
     { port: 443, service: "HTTPS 网页管理" },
     { port: 80, service: "HTTP 网页管理" },
   ];
